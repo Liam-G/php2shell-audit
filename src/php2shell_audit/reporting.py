@@ -17,6 +17,8 @@ def render_text(report: ScanReport) -> str:
         f"unknown: {report.unknown_count}",
         f"errors: {len(report.errors)}",
     ]
+    if report.metadata:
+        lines.append(f"metadata: {json.dumps(report.metadata, sort_keys=True)}")
     for finding in report.findings:
         lines.extend(
             (
@@ -42,7 +44,7 @@ def render_text(report: ScanReport) -> str:
 
 
 def render_sarif(report: ScanReport) -> str:
-    rule = {
+    version_rule = {
         "id": "PHP2SHELL-AFFECTED-VERSION",
         "name": "Affected PHP2Shell version",
         "shortDescription": {"text": "PHP version affected by CVE-2026-109618 and CVE-2026-109619"},
@@ -50,21 +52,55 @@ def render_sarif(report: ScanReport) -> str:
         "help": {"text": "Upgrade PHP to a fixed release and restart all workers."},
         "properties": {"security-severity": "9.2", "tags": ["security", "cve"]},
     }
+    indicator_rule = {
+        "id": "PHP2SHELL-INDICATOR",
+        "name": "Potential PHP2Shell indicator",
+        "shortDescription": {"text": "Potential PHP2Shell activity requires triage"},
+        "help": {
+            "text": "Preserve evidence and correlate with request, worker, and host telemetry."
+        },
+        "properties": {"tags": ["security", "incident-response", "cve"]},
+    }
     results: list[dict[str, Any]] = []
     for finding in report.findings:
         if finding.status is not Status.AFFECTED:
             continue
+        rule_id = (
+            "PHP2SHELL-INDICATOR"
+            if str(finding.metadata.get("rule_id", "")).startswith("PHP2SHELL-IOC-")
+            else "PHP2SHELL-AFFECTED-VERSION"
+        )
+        location: dict[str, Any] = {
+            "physicalLocation": {"artifactLocation": {"uri": finding.target}}
+        }
+        line_number = finding.metadata.get("line")
+        if isinstance(line_number, int):
+            source_uri = finding.evidence[0].source if finding.evidence else finding.target
+            location = {
+                "physicalLocation": {
+                    "artifactLocation": {"uri": source_uri},
+                    "region": {"startLine": line_number},
+                }
+            }
         results.append(
             {
-                "ruleId": rule["id"],
-                "level": "error",
+                "ruleId": rule_id,
+                "level": "warning" if rule_id == "PHP2SHELL-INDICATOR" else "error",
                 "message": {
-                    "text": f"{finding.summary}: {finding.target} reports PHP "
-                    f"{finding.version}. {finding.detail}"
+                    "text": (
+                        f"{finding.summary}: {finding.target}. {finding.detail}"
+                        if finding.version is None
+                        else f"{finding.summary}: {finding.target} reports PHP "
+                        f"{finding.version}. {finding.detail}"
+                    )
                 },
-                "locations": [{"physicalLocation": {"artifactLocation": {"uri": finding.target}}}],
+                "locations": [location],
                 "properties": finding.as_dict(),
-                "partialFingerprints": {"targetVersion": f"{finding.target}|{finding.version}"},
+                "partialFingerprints": {
+                    "targetEvidence": (
+                        f"{finding.target}|{finding.version}|{finding.metadata.get('rule_id', '')}"
+                    )
+                },
             }
         )
     document = {
@@ -72,7 +108,12 @@ def render_sarif(report: ScanReport) -> str:
         "version": "2.1.0",
         "runs": [
             {
-                "tool": {"driver": {"name": "php2shell-audit", "rules": [rule]}},
+                "tool": {
+                    "driver": {
+                        "name": "php2shell-audit",
+                        "rules": [version_rule, indicator_rule],
+                    }
+                },
                 "results": results,
             }
         ],

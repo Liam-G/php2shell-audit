@@ -26,6 +26,13 @@ def test_output_file(tmp_path: Path) -> None:
     assert '"php_version"' in output.read_text(encoding="utf-8")
 
 
+def test_hunt_command(tmp_path: Path, capsys) -> None:
+    log = tmp_path / "audit.log"
+    log.write_text("PHP_SESSION_UPLOAD_PROGRESS\n", encoding="utf-8")
+    assert main(["hunt", "--log", str(log)]) == 2
+    assert "Session upload-progress field observed" in capsys.readouterr().out
+
+
 def test_target_file_dry_run(tmp_path: Path, capsys) -> None:
     targets = tmp_path / "targets.txt"
     targets.write_text("# comment\nexample.test\nexample.test\n", encoding="utf-8")
@@ -40,6 +47,9 @@ def test_target_file_dry_run(tmp_path: Path, capsys) -> None:
         ["remote", "--target", "example.test", "--timeout", "0", "--dry-run"],
         ["remote", "--target", "example.test", "--workers", "99", "--dry-run"],
         ["version", "invalid"],
+        ["hunt"],
+        ["hunt", "--processes", "--max-files", "0"],
+        ["hunt", "--processes", "--max-file-bytes", "0"],
     ],
 )
 def test_invalid_configuration_exits(arguments) -> None:

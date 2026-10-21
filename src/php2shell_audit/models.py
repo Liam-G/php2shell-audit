@@ -69,6 +69,7 @@ class ScanReport:
     findings: tuple[Finding, ...]
     errors: tuple[str, ...] = ()
     notes: tuple[str, ...] = ()
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def affected_count(self) -> int:
@@ -95,4 +96,5 @@ class ScanReport:
             "findings": [item.as_dict() for item in self.findings],
             "errors": list(self.errors),
             "notes": list(self.notes),
+            "metadata": self.metadata,
         }

@@ -18,7 +18,17 @@ PHP_INFO_CODE = r"""echo json_encode([
  "binary" => PHP_BINARY,
  "ini" => php_ini_loaded_file() ?: null,
  "memory_limit" => ini_get("memory_limit"),
+ "post_max_size" => ini_get("post_max_size"),
+ "upload_max_filesize" => ini_get("upload_max_filesize"),
+ "max_input_vars" => ini_get("max_input_vars"),
+ "max_input_nesting_level" => ini_get("max_input_nesting_level"),
  "session_upload_progress" => ini_get("session.upload_progress.enabled"),
+ "session_upload_progress_name" => ini_get("session.upload_progress.name"),
+ "session_upload_progress_prefix" => ini_get("session.upload_progress.prefix"),
+ "session_upload_progress_freq" => ini_get("session.upload_progress.freq"),
+ "session_upload_progress_min_freq" => ini_get("session.upload_progress.min_freq"),
+ "session_use_only_cookies" => ini_get("session.use_only_cookies"),
+ "session_serialize_handler" => ini_get("session.serialize_handler"),
  "fatal_error_backtraces" => ini_get("fatal_error_backtraces"),
 ], JSON_UNESCAPED_SLASHES);"""
 
@@ -125,7 +135,12 @@ def inspect_binary(binary: str) -> Finding:
             "session_upload_progress_disabled": str(info.get("session_upload_progress"))
             in {"", "0"},
             "fatal_error_backtraces_disabled": str(info.get("fatal_error_backtraces")) in {"", "0"},
+            "session_use_only_cookies_enabled": str(info.get("session_use_only_cookies")) == "1",
         },
+        "scope_warning": (
+            "These values come from the inspected CLI binary. FPM pools, Apache directory "
+            "configuration, .user.ini, and other web SAPIs may override them."
+        ),
     }
     return assess_version(
         version,

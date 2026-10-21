@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "php2shell-audit"
-version = "0.1.0"
+version = "0.2.0"
 description = "Non-destructive PHP2Shell exposure scanner"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -27,6 +27,10 @@ reproducible text, JSON, and SARIF 2.1.0 reports for operators and CI.
 - passively reads `X-Powered-By` and `Server` headers with same-origin redirects only;
 - scans target lists concurrently with bounded workers, timeout, and target-count limits;
 - requires an explicit authorization acknowledgement before network traffic;
+- hunts offline logs for upload-progress, multipart-session, OOM, worker-crash,
+  heap-corruption, and use-after-free indicators without printing raw log lines;
+- optionally snapshots process lineage for shells and network tools directly spawned
+  by PHP-FPM, Apache, LiteSpeed, CGI, or FrankenPHP workers;
 - supports a no-traffic dry run and offline single-version assessment;
 - emits human-readable text, stable JSON, and GitHub-compatible SARIF 2.1.0;
 - has no runtime dependencies beyond Python 3.10 or newer.
@@ -100,6 +104,25 @@ php2shell-audit version 8.4.26
 php2shell-audit version 8.4.27 --format json
 ```
 
+## Incident hunting
+
+Inspect explicit logs or bounded directories without sending network traffic:
+
+```bash
+php2shell-audit hunt \
+  --log /var/log/php8.4-fpm.log \
+  --log-dir /var/log/nginx \
+  --processes \
+  --format json --output php2shell-hunt.json
+```
+
+Compressed `.gz` logs are supported. The scanner caps the number of files and
+bytes read, never emits raw log lines or process arguments, and records a
+SHA-256 digest for every matching line. Findings are triage leads—not proof of
+exploitation—and should be correlated with surrounding requests, worker logs,
+container telemetry, and file changes. See
+[docs/INCIDENT_RESPONSE.md](docs/INCIDENT_RESPONSE.md).
+
 ## Fixed upstream releases
 
 | Branch | First fixed release |
@@ -144,6 +167,12 @@ This is a version and provenance scanner, not an exploit verifier. Even a local
 version comparison cannot prove exploitability because downstream vendors and
 private builds may backport patches. Conversely, failure to observe a remote
 PHP header proves nothing. See [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
+
+Public exploit research was reviewed to improve defensive coverage, including
+[ikow/php2shell-poc](https://github.com/ikow/php2shell-poc),
+[eness/php2shell-CVE-2026-109618-CVE-2026-109619-PoC](https://github.com/eness/php2shell-CVE-2026-109618-CVE-2026-109619-PoC),
+and [Zer061/CVE-2026-109618](https://github.com/Zer061/CVE-2026-109618).
+Their payload builders and active triggers are deliberately not included.
 
 Sources: [PHP security announcement](https://www.php.net/),
 [CVE-2026-109618 advisory](https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w),

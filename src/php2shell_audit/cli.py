@@ -7,6 +7,7 @@ from pathlib import Path
 
 from . import __version__
 from .advisory import assess_version, parse_version
+from .hunt import hunt
 from .local import scan_local
 from .models import ScanReport, Status
 from .remote import scan_remote
@@ -58,6 +59,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     version.add_argument("php_version")
     _report_options(version)
+
+    hunt_parser = commands.add_parser(
+        "hunt", help="Inspect local logs and process lineage for defensive indicators"
+    )
+    hunt_parser.add_argument("--log", action="append", default=[], type=Path)
+    hunt_parser.add_argument("--log-dir", action="append", default=[], type=Path)
+    hunt_parser.add_argument(
+        "--processes", action="store_true", help="Inspect the current process tree"
+    )
+    hunt_parser.add_argument("--max-files", type=int, default=1000)
+    hunt_parser.add_argument(
+        "--max-file-bytes", type=int, default=50 * 1024 * 1024, metavar="BYTES"
+    )
+    _report_options(hunt_parser)
     return parser
 
 
@@ -91,6 +106,20 @@ def _execute(args: argparse.Namespace) -> ScanReport:
             raise ConfigurationError(f"invalid PHP version: {args.php_version!r}")
         finding = assess_version(version, target=args.php_version, source="command-line argument")
         return ScanReport("version", (finding,))
+    if args.command == "hunt":
+        if not args.log and not args.log_dir and not args.processes:
+            raise ConfigurationError("hunt requires at least one --log, --log-dir, or --processes")
+        if not 1 <= args.max_files <= 10_000:
+            raise ConfigurationError("--max-files must be between 1 and 10000")
+        if not 1 <= args.max_file_bytes <= 1024 * 1024 * 1024:
+            raise ConfigurationError("--max-file-bytes must be between 1 and 1073741824")
+        return hunt(
+            args.log,
+            args.log_dir,
+            include_processes=args.processes,
+            max_files=args.max_files,
+            max_file_bytes=args.max_file_bytes,
+        )
 
     targets = list(dict.fromkeys([*args.target, *_load_targets(args.target_file)]))
     if not targets:

@@ -13,7 +13,17 @@ def php_result(version: str = "8.3.35") -> CompletedProcess[str]:
         "binary": "/usr/bin/php",
         "ini": "/etc/php.ini",
         "memory_limit": "128M",
+        "post_max_size": "8M",
+        "upload_max_filesize": "2M",
+        "max_input_vars": "1000",
+        "max_input_nesting_level": "64",
         "session_upload_progress": "1",
+        "session_upload_progress_name": "PHP_SESSION_UPLOAD_PROGRESS",
+        "session_upload_progress_prefix": "upload_progress_",
+        "session_upload_progress_freq": "1%",
+        "session_upload_progress_min_freq": "1",
+        "session_use_only_cookies": "1",
+        "session_serialize_handler": "php",
         "fatal_error_backtraces": "0",
     }
     return CompletedProcess(["php"], 0, json.dumps(payload), "")
@@ -28,6 +38,8 @@ def test_local_binary_scan(command, _package) -> None:
     assert finding.version == "8.3.35"
     assert finding.metadata["runtime"]["sapi"] == "cli"
     assert not finding.metadata["temporary_mitigation_observations"]["memory_limit_unlimited"]
+    assert finding.metadata["temporary_mitigation_observations"]["session_use_only_cookies_enabled"]
+    assert "CLI binary" in finding.metadata["scope_warning"]
 
 
 @patch("php2shell_audit.local.discover_binaries", return_value=())
