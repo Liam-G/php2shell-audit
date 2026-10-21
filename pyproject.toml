@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "php2shell-audit"
+version = "0.1.0"
+description = "Non-destructive PHP2Shell exposure scanner"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Liam Giannini, Webcracy.ch" }]
+maintainers = [{ name = "Liam Giannini, Webcracy.ch" }]
+keywords = ["php", "security", "scanner", "cve", "sarif"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Information Technology",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Security",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.13,<2",
+  "build>=1.2,<2",
+  "pytest>=8.3,<9",
+  "pytest-cov>=6,<7",
+  "ruff>=0.8,<1",
+]
+
+[project.scripts]
+php2shell-audit = "php2shell_audit.cli:main"
+
+[project.urls]
+Homepage = "https://webcracy.ch"
+Repository = "https://github.com/Liam-G/php2shell-audit"
+Issues = "https://github.com/Liam-G/php2shell-audit/issues"
+"Security policy" = "https://github.com/Liam-G/php2shell-audit/security/policy"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --cov=php2shell_audit --cov-report=term-missing --cov-fail-under=85"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = ["S101", "S310", "S501"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+packages = ["php2shell_audit"]
+mypy_path = "src"
